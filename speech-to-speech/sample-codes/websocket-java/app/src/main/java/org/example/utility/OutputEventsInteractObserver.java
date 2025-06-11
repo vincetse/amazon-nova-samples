@@ -25,8 +25,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Random;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 
 @Getter
@@ -54,11 +58,13 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
     AtomicReference<String> toolName = new AtomicReference<>("");
     AtomicReference<String> role = new AtomicReference<>("");
     AtomicReference<String> generationStage = new AtomicReference<>("");
+    private final ToolResultProcessor toolResultProcessor;
 
     public OutputEventsInteractObserver(Session session) {
         this.session = session;
         this.objectMapper = new ObjectMapper();
         this.localChatHistory = new ArrayList<>();
+        this.toolResultProcessor = new ToolResultProcessor();
     }
 
     @Override
@@ -88,6 +94,7 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
                     toolUseId.set(eventNode.get("toolUse").get("toolUseId").asText());
                     toolUseContent.set(eventNode.get("toolUse").get("content").asText());
                     toolName.set(eventNode.get("toolUse").get("toolName").asText());
+                    log.info("tool use: {}", eventNode);
 
                 } else if (eventNode.has("contentEnd")) {
                     if ("TOOL".equals(eventNode.get("contentEnd").get("type").asText())) {
@@ -97,6 +104,9 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
                     handleContentEnd(eventNode.get("contentEnd"));
                 } else if (eventNode.has("completionEnd")) {
                     handleCompletionEnd(eventNode.get("completionEnd"));
+                }
+                else if (eventNode.has("usageEvent")) {
+                    log.info("Parsing usage metrics jsonText={}", eventNode);
                 }
             }
 
@@ -160,7 +170,7 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
 
         try {
             validateToolUseParameters();
-            processToolUse(node);
+            processToolUseAsync();
         } catch (IllegalStateException e) {
             log.error("Tool use processing failed: {}", e.getMessage());
         }
@@ -172,118 +182,89 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
         }
     }
 
-    private void processToolUse(JsonNode node) {
-        log.debug("Processing tool use for node: {}", node);
+    private void processToolUseAsync() {
+        log.debug("Processing tool use asynchronously");
         String localChatHistory = createChatHistoryFromLocal();
         logChatHistories(localChatHistory);
-        String contentID = UUID.randomUUID().toString();
-        sendStart(contentID);
-        sendResult(contentID);
-        sendEnd(contentID);
+        
+        // Process the tool use asynchronously
+        CompletableFuture<ToolResultProcessor.ToolResultResponse> future = 
+            toolResultProcessor.processToolUseAsync(promptId, toolUseId.get(), toolName.get(), toolUseContent.get());
+        
+        // When the future completes, send the tool result
+        future.thenAccept(response -> {
+            String contentId = response.getContentId();
+            sendStart(contentId, response.getToolUseId());
+            sendToolResult(response);
+            sendEnd(contentId);
+        }).exceptionally(ex -> {
+            log.error("Error processing tool result", ex);
+            // Send error response to the model
+            String errorContentId = UUID.randomUUID().toString();
+            sendStart(errorContentId, toolUseId.get());
+            sendErrorToolResult(errorContentId, ex);
+            sendEnd(errorContentId);
+            return null;
+        });
     }
 
-    private void sendResult (String contentId)
-    {
+
+    private void sendToolResult(ToolResultProcessor.ToolResultResponse response) {
         if (inputObserver != null) {
             try {
                 // Create the "toolResult" object
                 ObjectNode toolResultNode = objectMapper.createObjectNode();
-                toolResultNode.put("promptName", promptId);
-                toolResultNode.put("contentName", contentId);
-                ObjectNode contentNode = objectMapper.createObjectNode();
-                switch (toolName.get()) {
-                    case "getDateAndTimeTool" : {
-                        LocalDate currentDate = LocalDate.now(ZoneId.of("America/Los_Angeles"));
-                        ZonedDateTime pstTime = ZonedDateTime.now(ZoneId.of("America/Los_Angeles"));
-                        contentNode.put("date", currentDate.format(DateTimeFormatter.ISO_DATE));
-                        contentNode.put("year", currentDate.getYear());
-                        contentNode.put("month", currentDate.getMonthValue());
-                        contentNode.put("day", currentDate.getDayOfMonth());
-                        contentNode.put("dayOfWeek", currentDate.getDayOfWeek().toString());
-                        contentNode.put("timezone", "PST");
-                        contentNode.put("formattedTime", pstTime.format(DateTimeFormatter.ofPattern("HH:mm")));
-                        break;
+                toolResultNode.put("promptName", response.getPromptId());
+                toolResultNode.put("contentName", response.getContentId());
+                toolResultNode.put("content", response.getContent()); // Content is already properly formatted JSON string
 
-                    }
-                    case "getWeatherTool": {
-                        log.info("Weather tool called");
-                        try {
-                            // Parse the tool content to get latitude and longitude
-                            JsonNode toolContent = objectMapper.readTree(toolUseContent.get());
-                            double latitude = toolContent.get("latitude").asDouble();
-                            double longitude = toolContent.get("longitude").asDouble();
-                            
-                            // Call the weather API
-                            Map<String, Object> weatherData = fetchWeatherData(latitude, longitude);
-                            
-                            // Convert map to JsonNode and add it to content
-                            contentNode = objectMapper.valueToTree(weatherData);
-                            
-                        } catch (Exception e) {
-                            log.error("Error processing weather tool request", e);
-                            contentNode.put("error", "Failed to fetch weather data: " + e.getMessage());
-                        }
-                        break;
-                    }
-                    default: {
-                        log.warn("Unhandled tool: {}", toolName.get());
-                    }
-                }
-
-                toolResultNode.put("content", objectMapper.writeValueAsString(contentNode)); // Ensure proper escaping
                 // Create the final JSON structure
                 ObjectNode eventNode = objectMapper.createObjectNode();
                 eventNode.set("toolResult", toolResultNode);
 
                 ObjectNode rootNode = objectMapper.createObjectNode();
                 rootNode.set("event", eventNode);
-                inputObserver.onNext(objectMapper.writeValueAsString(rootNode));
+                
+                String jsonPayload = objectMapper.writeValueAsString(rootNode);
+                log.debug("Tool Result - Tool Result payload: {}", jsonPayload);
+                inputObserver.onNext(jsonPayload);
 
             } catch (Exception e) {
                 throw new RuntimeException("Error creating JSON payload for toolResult", e);
             }
         }
-
     }
 
-    private Map<String, Object> fetchWeatherData(double latitude, double longitude) throws IOException {
-        String url = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude + 
-                     "&longitude=" + longitude + "&current_weather=true";
+    private void sendErrorToolResult(String contentId, Throwable ex) {
+        if (inputObserver != null) {
+            try {
+                ObjectNode toolResultNode = objectMapper.createObjectNode();
+                toolResultNode.put("promptName", promptId);
+                toolResultNode.put("contentName", contentId);
+                
+                ObjectNode errorContent = objectMapper.createObjectNode();
+                errorContent.put("error", "Tool execution failed: " + ex.getMessage());
+                
+                toolResultNode.put("content", objectMapper.writeValueAsString(errorContent));
+                
+                // Create the final JSON structure
+                ObjectNode eventNode = objectMapper.createObjectNode();
+                eventNode.set("toolResult", toolResultNode);
 
-        try {
-            RequestConfig config = RequestConfig.custom()
-                .setConnectTimeout(5000)
-                .setSocketTimeout(5000)
-                .build();
-
-            CloseableHttpClient httpClient = HttpClients.custom()
-                .setDefaultRequestConfig(config)
-                .build();
-
-            HttpGet request = new HttpGet(url);
-            request.addHeader("User-Agent", "MyApp/1.0");
-            request.addHeader("Accept", "application/json");
-
-            CloseableHttpResponse response = httpClient.execute(request);
-            String responseBody = EntityUtils.toString(response.getEntity());
-            
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> weatherData = mapper.readValue(responseBody, Map.class);
-            
-            log.info("weatherData: " + weatherData);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("weather_data", weatherData);
-            return result;
-            
-        } catch (IOException error) {
-            System.err.println("Error fetching weather data: " + error.getMessage());
-            throw error;
+                ObjectNode rootNode = objectMapper.createObjectNode();
+                rootNode.set("event", eventNode);
+                
+                String jsonPayload = objectMapper.writeValueAsString(rootNode);
+                log.debug("Sending error tool result: {}", jsonPayload);
+                inputObserver.onNext(jsonPayload);
+            } catch (Exception e) {
+                log.error("Failed to send error tool result", e);
+            }
         }
     }
 
 
-    private void sendStart(String contentId) {
+    private void sendStart(String contentId, String toolUseId) {
         if (inputObserver != null) {
             try {
                 ObjectNode rootNode = objectMapper.createObjectNode();
@@ -296,13 +277,14 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
                 contentStartNode.put("type", "TOOL");
                 contentStartNode.put("role", "TOOL");
                 ObjectNode toolResultInputConfigNode = contentStartNode.putObject("toolResultInputConfiguration");
-                toolResultInputConfigNode.put("toolUseId", toolUseId.get());
+                toolResultInputConfigNode.put("toolUseId", toolUseId);
                 toolResultInputConfigNode.put("type", "TEXT");
 
                 ObjectNode textInputConfigNode = toolResultInputConfigNode.putObject("textInputConfiguration");
                 textInputConfigNode.put("mediaType", "text/plain");
 
                 String contentStart = objectMapper.writeValueAsString(rootNode);
+                log.debug("Tool Result - Content Start payload: {}", contentStart);
                 inputObserver.onNext(contentStart);
             } catch (Exception e) {
                 throw new RuntimeException("Error creating JSON payload for Tool Result contentStart", e);
@@ -320,8 +302,9 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
                 contentEndNode.put("promptName", promptId);
                 contentEndNode.put("contentName", contentId);
 
-                String contentEndJson = objectMapper.writeValueAsString(rootNode);
-                inputObserver.onNext(contentEndJson);
+                String contentEnd = objectMapper.writeValueAsString(rootNode);
+                log.debug("Tool Result - Content End payload: {}", contentEnd);
+                inputObserver.onNext(contentEnd);
             } catch (Exception e) {
                 throw new RuntimeException("Error creating JSON payload for Tool Result contentEnd", e);
             }
@@ -375,6 +358,7 @@ public class OutputEventsInteractObserver implements InteractObserver<String> {
     public void onComplete() {
         log.info("Output complete");
         try {
+            toolResultProcessor.shutdown();
             session.close(1000, "Output complete");
         } catch (Exception e) {
             log.error("Error closing session", e);

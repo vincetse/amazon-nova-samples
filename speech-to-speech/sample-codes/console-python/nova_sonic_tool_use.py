@@ -51,6 +51,140 @@ async def time_it_async(label, methodToRun):
     debug_print(f"Execution time for {label}: {end_time - start_time:.4f} seconds")
     return result
 
+class ToolProcessor:
+    def __init__(self):
+        # ThreadPoolExecutor could be used for complex implementations
+        self.tasks = {}
+    
+    async def process_tool_async(self, tool_name, tool_content):
+        """Process a tool call asynchronously and return the result"""
+        # Create a unique task ID
+        task_id = str(uuid.uuid4())
+        
+        # Create and store the task
+        task = asyncio.create_task(self._run_tool(tool_name, tool_content))
+        self.tasks[task_id] = task
+        
+        try:
+            # Wait for the task to complete
+            result = await task
+            return result
+        finally:
+            # Clean up the task reference
+            if task_id in self.tasks:
+                del self.tasks[task_id]
+    
+    async def _run_tool(self, tool_name, tool_content):
+        """Internal method to execute the tool logic"""
+        debug_print(f"Processing tool: {tool_name}")
+        tool = tool_name.lower()
+        
+        if tool == "getdateandtimetool":
+            # Get current date in PST timezone
+            pst_timezone = pytz.timezone("America/Los_Angeles")
+            pst_date = datetime.datetime.now(pst_timezone)
+            
+            return {
+                "formattedTime": pst_date.strftime("%I:%M %p"),
+                "date": pst_date.strftime("%Y-%m-%d"),
+                "year": pst_date.year,
+                "month": pst_date.month,
+                "day": pst_date.day,
+                "dayOfWeek": pst_date.strftime("%A").upper(),
+                "timezone": "PST"
+            }
+        
+        elif tool == "trackordertool":
+            # Simulate a long-running operation
+            debug_print(f"TrackOrderTool starting operation that will take time...")
+            await asyncio.sleep(10)  # Non-blocking sleep to simulate processing time
+            
+            # Extract order ID from toolUseContent
+            content = tool_content.get("content", {})
+            content_data = json.loads(content)
+            order_id = content_data.get("orderId", "")
+            request_notifications = content_data.get("requestNotifications", False)
+            
+            # Convert order_id to string if it's an integer
+            if isinstance(order_id, int):
+                order_id = str(order_id)
+            # Validate order ID format
+            if not order_id or not isinstance(order_id, str):
+                return {
+                    "error": "Invalid order ID format",
+                    "orderStatus": "",
+                    "estimatedDelivery": "",
+                    "lastUpdate": ""
+                }
+            
+            # Create deterministic randomness based on order ID
+            # This ensures the same order ID always returns the same status
+            seed = int(hashlib.md5(order_id.encode(), usedforsecurity=False).hexdigest(), 16) % 10000
+            random.seed(seed)
+            
+            # Rest of the order tracking logic
+            statuses = [
+                "Order received", 
+                "Processing", 
+                "Preparing for shipment",
+                "Shipped",
+                "In transit", 
+                "Out for delivery",
+                "Delivered",
+                "Delayed"
+            ]
+            
+            weights = [10, 15, 15, 20, 20, 10, 5, 3]
+            status = random.choices(statuses, weights=weights, k=1)[0]
+            
+            # Generate delivery date logic
+            today = datetime.datetime.now()
+            if status == "Delivered":
+                delivery_days = -random.randint(0, 3)
+                estimated_delivery = (today + datetime.timedelta(days=delivery_days)).strftime("%Y-%m-%d")
+            elif status == "Out for delivery":
+                estimated_delivery = today.strftime("%Y-%m-%d")
+            else:
+                delivery_days = random.randint(1, 10)
+                estimated_delivery = (today + datetime.timedelta(days=delivery_days)).strftime("%Y-%m-%d")
+
+            # Handle notification request
+            notification_message = ""
+            if request_notifications and status != "Delivered":
+                notification_message = f"You will receive notifications for order {order_id}"
+
+            # Return tracking information
+            tracking_info = {
+                "orderStatus": status,
+                "orderNumber": order_id,
+                "notificationStatus": notification_message
+            }
+
+            # Add appropriate fields based on status
+            if status == "Delivered":
+                tracking_info["deliveredOn"] = estimated_delivery
+            elif status == "Out for delivery":
+                tracking_info["expectedDelivery"] = "Today"
+            else:
+                tracking_info["estimatedDelivery"] = estimated_delivery
+
+            # Add location information based on status
+            if status == "In transit":
+                tracking_info["currentLocation"] = "Distribution Center"
+            elif status == "Delivered":
+                tracking_info["deliveryLocation"] = "Front Door"
+                
+            # Add additional info for delayed status
+            if status == "Delayed":
+                tracking_info["additionalInfo"] = "Weather delays possible"
+                
+            debug_print(f"TrackOrderTool completed successfully")
+            return tracking_info
+        else:
+            return {
+                "error": f"Unsupported tool: {tool_name}"
+            }
+
 class BedrockStreamManager:
     """Manages bidirectional streaming with AWS Bedrock using asyncio"""
     
@@ -286,6 +420,12 @@ class BedrockStreamManager:
         self.toolUseId = ""
         self.toolName = ""
 
+        # Add a tool processor
+        self.tool_processor = ToolProcessor()
+        
+        # Add tracking for in-progress tool calls
+        self.pending_tool_tasks = {}
+
     def _initialize_client(self):
         """Initialize the Bedrock client."""
         config = Config(
@@ -416,9 +556,9 @@ class BedrockStreamManager:
         await self.send_raw_event(content_end_event)
         debug_print("Audio ended")
     
-    async def send_tool_start_event(self, content_name):
+    async def send_tool_start_event(self, content_name, tool_use_id):
         """Send a tool content start event to the Bedrock stream."""
-        content_start_event = self.TOOL_CONTENT_START_EVENT % (self.prompt_name, content_name, self.toolUseId)
+        content_start_event = self.TOOL_CONTENT_START_EVENT % (self.prompt_name, content_name, tool_use_id)
         debug_print(f"Sending tool start event: {content_start_event}")  
         await self.send_raw_event(content_start_event)
 
@@ -469,7 +609,9 @@ class BedrockStreamManager:
                             
                             # Handle different response types
                             if 'event' in json_data:
-                                if 'contentStart' in json_data['event']:
+                                if 'completionStart' in json_data['event']:
+                                    debug_print(f"completionStart: {json_data['event']}")
+                                elif 'contentStart' in json_data['event']:
                                     debug_print("Content start detected")
                                     content_start = json_data['event']['contentStart']
                                     # set role
@@ -497,7 +639,6 @@ class BedrockStreamManager:
                                         print(f"Assistant: {text_content}")
                                     elif (self.role == "USER"):
                                         print(f"User: {text_content}")
-
                                 elif 'audioOutput' in json_data['event']:
                                     audio_content = json_data['event']['audioOutput']['content']
                                     audio_bytes = base64.b64decode(audio_content)
@@ -509,16 +650,16 @@ class BedrockStreamManager:
                                     debug_print(f"Tool use detected: {self.toolName}, ID: {self.toolUseId}")
                                 elif 'contentEnd' in json_data['event'] and json_data['event'].get('contentEnd', {}).get('type') == 'TOOL':
                                     debug_print("Processing tool use and sending result")
-                                    toolResult = await self.processToolUse(self.toolName, self.toolUseContent)
-                                    toolContent = str(uuid.uuid4())
-                                    await self.send_tool_start_event(toolContent)
-                                    await self.send_tool_result_event(toolContent, toolResult)
-                                    await self.send_tool_content_end_event(toolContent)
-                                
+                                     # Start asynchronous tool processing - non-blocking
+                                    self.handle_tool_request(self.toolName, self.toolUseContent, self.toolUseId)
+                                    debug_print("Processing tool use asynchronously")
+                                elif 'contentEnd' in json_data['event']:
+                                    debug_print("Content end")
                                 elif 'completionEnd' in json_data['event']:
                                     # Handle end of conversation, no more response will be generated
-                                    print("End of response sequence")
-                            
+                                    debug_print("End of response sequence")
+                                elif 'usageEvent' in json_data['event']:
+                                    debug_print(f"UsageEvent: {json_data['event']}")
                             # Put the response in the output queue for other components
                             await self.output_queue.put(json_data)
                         except json.JSONDecodeError:
@@ -540,120 +681,69 @@ class BedrockStreamManager:
         finally:
             self.is_active = False
 
-    async def processToolUse(self, toolName, toolUseContent):
-        """Return the tool result"""
-        tool = toolName.lower()
-        debug_print(f"Tool Use Content: {toolUseContent}")
+    def handle_tool_request(self, tool_name, tool_content, tool_use_id):
+        """Handle a tool request asynchronously"""
+        # Create a unique content name for this tool response
+        tool_content_name = str(uuid.uuid4())
         
-        if tool == "getdateandtimetool":
-            # Get current date in PST timezone
-            pst_timezone = pytz.timezone("America/Los_Angeles")
-            pst_date = datetime.datetime.now(pst_timezone)
-            
-            return {
-                "formattedTime": pst_date.strftime("%I:%M %p"),
-                "date": pst_date.strftime("%Y-%m-%d"),
-                "year": pst_date.year,
-                "month": pst_date.month,
-                "day": pst_date.day,
-                "dayOfWeek": pst_date.strftime("%A").upper(),
-                "timezone": "PST"
-            }
+        # Create an asynchronous task for the tool execution
+        task = asyncio.create_task(self._execute_tool_and_send_result(
+            tool_name, tool_content, tool_use_id, tool_content_name))
         
-        elif tool == "trackordertool":
-
-            # Extract order ID from toolUseContent
-            content = toolUseContent.get("content", {})
-            content_data = json.loads(content)
-            order_id = content_data.get("orderId", "")
-            request_notifications = toolUseContent.get("requestNotifications", False)
+        # Store the task
+        self.pending_tool_tasks[tool_content_name] = task
+        
+        # Add error handling
+        task.add_done_callback(
+            lambda t: self._handle_tool_task_completion(t, tool_content_name))
+    
+    def _handle_tool_task_completion(self, task, content_name):
+        """Handle the completion of a tool task"""
+        # Remove task from pending tasks
+        if content_name in self.pending_tool_tasks:
+            del self.pending_tool_tasks[content_name]
+        
+        # Handle any exceptions
+        if task.done() and not task.cancelled():
+            exception = task.exception()
+            if exception:
+                debug_print(f"Tool task failed: {str(exception)}")
+    
+    async def _execute_tool_and_send_result(self, tool_name, tool_content, tool_use_id, content_name):
+        """Execute a tool and send the result"""
+        try:
+            debug_print(f"Starting tool execution: {tool_name}")
             
-            # Convert order_id to string if it's an integer
-            if isinstance(order_id, int):
-                order_id = str(order_id)
-            # Validate order ID format
-            if not order_id or not isinstance(order_id, str):
-                return {
-                    "error": "Invalid order ID format",
-                    "orderStatus": "",
-                    "estimatedDelivery": "",
-                    "lastUpdate": ""
-                }
+            # Process the tool - this doesn't block the event loop
+            tool_result = await self.tool_processor.process_tool_async(tool_name, tool_content)
             
-            # Create deterministic randomness based on order ID
-            # This ensures the same order ID always returns the same status
-            seed = int(hashlib.md5(order_id.encode(), usedforsecurity=False).hexdigest(), 16) % 10000
-            random.seed(seed)
+            # Send the result sequence
+            await self.send_tool_start_event(content_name, tool_use_id)
+            await self.send_tool_result_event(content_name, tool_result)
+            await self.send_tool_content_end_event(content_name)
             
-            # Possible statuses with appropriate weights
-            statuses = [
-                "Order received", 
-                "Processing", 
-                "Preparing for shipment",
-                "Shipped",
-                "In transit", 
-                "Out for delivery",
-                "Delivered",
-                "Delayed"
-            ]
-            
-            weights = [10, 15, 15, 20, 20, 10, 5, 3]
-            
-            # Select a status based on the weights
-            status = random.choices(statuses, weights=weights, k=1)[0]
-            
-            # Generate a realistic estimated delivery date
-            today = datetime.datetime.now()
-            # Handle estimated delivery date based on status
-            if status == "Delivered":
-                # For delivered items, delivery date is in the past
-                delivery_days = -random.randint(0, 3)
-                estimated_delivery = (today + datetime.timedelta(days=delivery_days)).strftime("%Y-%m-%d")
-            elif status == "Out for delivery":
-                # For out for delivery, delivery is today
-                estimated_delivery = today.strftime("%Y-%m-%d")
-            else:
-                # For other statuses, delivery is in the future
-                delivery_days = random.randint(1, 10)
-                estimated_delivery = (today + datetime.timedelta(days=delivery_days)).strftime("%Y-%m-%d")
-
-            # Handle notification request if enabled
-            notification_message = ""
-            if request_notifications and status != "Delivered":
-                notification_message = f"You will receive notifications for order {order_id}"
-
-            # Return comprehensive tracking information
-            tracking_info = {
-                "orderStatus": status,
-                "orderNumber": order_id,
-                "notificationStatus": notification_message
-            }
-
-            # Add appropriate fields based on status
-            if status == "Delivered":
-                tracking_info["deliveredOn"] = estimated_delivery
-            elif status == "Out for delivery":
-                tracking_info["expectedDelivery"] = "Today"
-            else:
-                tracking_info["estimatedDelivery"] = estimated_delivery
-
-            # Add location information based on status
-            if status == "In transit":
-                tracking_info["currentLocation"] = "Distribution Center"
-            elif status == "Delivered":
-                tracking_info["deliveryLocation"] = "Front Door"
+            debug_print(f"Tool execution complete: {tool_name}")
+        except Exception as e:
+            debug_print(f"Error executing tool {tool_name}: {str(e)}")
+            # Try to send an error response if possible
+            try:
+                error_result = {"error": f"Tool execution failed: {str(e)}"}
                 
-            # Add additional info for delayed status
-            if status == "Delayed":
-                tracking_info["additionalInfo"] = "Weather delays possible"
-                
-            return tracking_info
+                await self.send_tool_start_event(content_name, tool_use_id)
+                await self.send_tool_result_event(content_name, error_result)
+                await self.send_tool_content_end_event(content_name)
+            except Exception as send_error:
+                debug_print(f"Failed to send error response: {str(send_error)}")
     
     async def close(self):
         """Close the stream properly."""
         if not self.is_active:
             return
-       
+        
+        # Cancel any pending tool tasks
+        for task in self.pending_tool_tasks.values():
+            task.cancel()
+
         self.is_active = False
         if self.response_task and not self.response_task.done():
             self.response_task.cancel()

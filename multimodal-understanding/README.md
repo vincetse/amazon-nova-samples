@@ -1,3 +1,17 @@
+# Getting Started Module
+
+If you are starting to explore Amazon Nova models, best way to get first few API calls made is by exploring our [Getting Started Module](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/getting-started)
+
+# Self Paced Workshop
+
+Once you have made few API calls, next step is to go through a quick self paced workshop on how to use Amazon Nova models and get aquinted to all fo their capability. You can find [self paced workshop here](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/workshop)
+
+# Repeatable Patterns Module
+
+Now that you know how to use Amazon Nova models and have completed the workshop, sometimes you need some repeatable code blocks that help you get job done faster instead of reinventing the wheel, check out the [repeatable patterns here](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns). You can also take a look below on various patterns that are available.
+
+## :bulb: Break down of various repeatable pattern
+
 ## Core Text Understanding Repeatable Patterns
 
 | UseCase                                                      | UseCase Description                                                                                              | Repeatable Pattern Github Link                                                                                                                                    |
@@ -22,6 +36,8 @@
 | Batch Inference with Multimodal Inputs                         | A How to guide on how to use Bedrock Batch Inference with Multimodal content like images and videos                                | Image: [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/14-batch-inference/image); Video: [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/14-batch-inference/video) |
 | Intelligent Multimodal Document Understanding with PDF Support | A How to guide on how to use Amazon Nova multimodal understanding models for Intelligent Document Processing using PDF Support     | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/14-document-understanding-idp)                                                                                                                                                      |
 | Video Temporal Understanding with Amazon Nova Premier          | A How to guide on how to use Amazon Nova Premiers temporal understanding                                                           | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/25-temporal-reasoning-premier)                                                                                                                                                      |
+| Helpful Library for Multimodal                                 | A How to guide on various helpful utils to use when using multimodal understanding capability of Amazon Nova models                | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/sample-apps/01-multimodal-with-helper-libraries)                                                                                                                                                        |
+| Notebook LM with Amazon Nova models                            | An example App with Notebook LLM with Amazon Nova and Polly                                                                        | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/sample-apps/02-bedrock-notebook-lm)                                                                                                                                                                     |
 
 ### Bedrock Fine Tuning and Distillation Repeatable Patterns
 
@@ -45,3 +61,9 @@
 | ReAct Agent with Langgraph using Nova Premier          | A How to guide on how to use React based agent using Langgraph with Premier                                | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/19-react-agent-with-langgraph-and-premier)         |
 | ReAct Agent with OpenAI SDK with Nova Premier          | A How to guide on how to use React based agent using OpenAI SDK with Premier                               | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/20-react-agent-with-openapi-agent-sdk-and-premier) |
 | MultiAgent Orchestration using CrewAI and Noav Premier | A How to guide on how to use multiagent orchestration based ausing CrewAI and Noav Premier                 | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/21-multi-agent-with-crewai-and-premier)            |
+
+## Other Nova Apps
+
+| UseCase                                                | UseCase Description                                                                        | Repeatable Pattern Github Link                                                                                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MultiAgent Orchestration using CrewAI and Noav Premier | A How to guide on how to use multiagent orchestration based ausing CrewAI and Noav Premier | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/21-multi-agent-with-crewai-and-premier) |

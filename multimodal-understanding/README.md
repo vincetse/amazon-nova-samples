@@ -4,11 +4,11 @@ If you are starting to explore Amazon Nova models, best way to get first few API
 
 # Self Paced Workshop
 
-Once you have made few API calls, next step is to go through a quick self paced workshop on how to use Amazon Nova models and get aquinted to all fo their capability. You can find [self paced workshop here](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/workshop)
+fter making a few API calls, the next step is to complete a self-paced workshop to become acquainted with the capabilities of Amazon Nova models. This workshop can be accessed [self paced workshop here](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/workshop)
 
 # Repeatable Patterns Module
 
-Now that you know how to use Amazon Nova models and have completed the workshop, sometimes you need some repeatable code blocks that help you get job done faster instead of reinventing the wheel, check out the [repeatable patterns here](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns). You can also take a look below on various patterns that are available.
+Now that you have learned how to utilize Amazon Nova models and completed the workshop, you may find it beneficial to leverage repeatable code blocks that can expedite your work, rather than reinventing the wheel. We recommend reviewing the [repeatable patterns available here](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns).. Additionally, you may wish to explore the various patterns that are currently accessible.
 
 ## :bulb: Break down of various repeatable pattern
 

@@ -26,3 +26,10 @@ The following projects were developed by AWS teams and showcase examples of how 
 
     A CDK-deployable Nova Sonic S2S application designed as a flexible foundation for building PoCs. The CDK package deploys the WebSocket service to Amazon ECS Fargate and hosts the frontend web application on Amazon S3 and CloudFront as a static site with Amazon Cognito authentication.
 
+- [Nova Sonic Sample Integration with Telephony Platforms: Vonage and Twilio](https://github.com/aws-samples/sample-sonic-contact-center-with-telephony)
+
+    This solution delivers a comprehensive analytics dashboard for monitoring and optimizing Amazon Bedrock's Nova speech-to-speech interactions in customer support. It features real-time sentiment analysis, agent guidance, and key metrics like talk time ratios and response times—powered by Nova Lite. The backend integrates a knowledge base for more accurate responses, and an adapter layer enables integration with telephony platforms like Vonage and Twilio.
+
+- [Nova Sonic CDK Package: Supports Java and Python WebSocket with Load Testing Capability](https://github.com/aws-samples/generative-ai-cdk-constructs-samples/tree/main/samples/speech-to-speech)
+
+    The CDK-deployable Nova Sonic package includes a generic WebSocket server and UI, serving as both a PoC starting point and a reference architecture for production deployments. It offers two server implementations—one using the Java SDK and the other using the Python SDK—allowing users to choose their preferred programming language. The package also includes a load testing tool to evaluate concurrency limits, helping with production capacity planning and cost estimation.

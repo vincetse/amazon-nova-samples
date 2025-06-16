@@ -46,7 +46,7 @@ Now that you have learned how to utilize Amazon Nova models and completed the wo
 | Distillation: Synthetic Data Generation using a Teacher Model | A How to guide on how to use Amazon Nova Pro/Premier as a teacher model to generate Synthetic data and then fine tune now Lite | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/03-synthetic-data-knowledge-distillation) |
 | Fine Tuning: Amazon Nova model Customization using Bedrock    | A How to guide on how to fine tune a model using Bedrock Fine Tuning using Tool use.                                           | [Link](https://github.com/aws-samples/amazon-nova-samples/tree/main/multimodal-understanding/repeatable-patterns/15-finetuning-with-bedrock)               |
 
-## Agents/RAG Understanding Repeatable Patterns
+### Agents/RAG Repeatable Patterns
 
 | UseCase                                                | UseCase Description                                                                                        | Repeatable Pattern Github Link                                                                                                                                      |
 | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

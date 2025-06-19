@@ -11,6 +11,9 @@ VIDEO_FORMATS = ["mov", "mkv", "mp4", "webm"]
 MAX_NUM_IMAGES = 10
 MODEL_TO_NUM_SAMPLES_MAP = {"micro": (8, 20000), "lite": (8, 20000), "pro": (8, 20000)}
 
+# Keywords that are not allowed in text content
+FORBIDDEN_KEYWORDS = ["Bot:", "<image>", "<video>", "[EOS]", "System:", "Assistant:", "User:"]
+
 
 class ConverseRoles:
     """Defines the possible roles in a conversation according to converse format"""
@@ -56,6 +59,24 @@ def load_jsonl_data(file_path: str):
         return data
     except Exception as e:
         raise NovaClientError(f"Error loading data from {file_path}: {str(e)}")
+
+
+def check_forbidden_keywords(text: str) -> List[str]:
+    """
+    Checks if text contains any forbidden keywords (case-insensitive).
+    
+    Args:
+        text (str): The text to check
+        
+    Returns:
+        List[str]: List of forbidden keywords found in the text
+    """
+    found_keywords = []
+    text_lower = text.lower()
+    for keyword in FORBIDDEN_KEYWORDS:
+        if keyword.lower() in text_lower:
+            found_keywords.append(keyword)
+    return found_keywords
 
 
 class S3Location(BaseModel):
@@ -121,6 +142,18 @@ class ContentItem(BaseModel):
                 f"Invalid content, at least one of {list(cls.model_fields.keys())} must be provided"
             )
         return values
+
+    @field_validator("text")
+    def validate_text_keywords(cls, text):
+        """Validates that text does not contain forbidden keywords."""
+        if text is not None:
+            found_keywords = check_forbidden_keywords(text)
+            if found_keywords:
+                keywords_str = ", ".join(found_keywords)
+                raise ValueError(
+                    f"Invalid text content, please do not use these keywords: {keywords_str}"
+                )
+        return text
 
 
 class Message(BaseModel):
@@ -207,6 +240,17 @@ class SystemMessage(BaseModel):
 
     text: str
 
+    @field_validator("text")
+    def validate_text_keywords(cls, text):
+        """Validates that system message text does not contain forbidden keywords."""
+        found_keywords = check_forbidden_keywords(text)
+        if found_keywords:
+            keywords_str = ", ".join(found_keywords)
+            raise ValueError(
+                f"Invalid system message text, please do not use these keywords: {keywords_str}"
+            )
+        return text
+
 
 class ConverseDatasetSample(BaseModel):
     """Represents a complete conversation sample with system message and message turns."""
@@ -224,41 +268,48 @@ class ConverseDatasetSample(BaseModel):
 
 def validate_converse_dataset(args):
     """Validates the entire conversation dataset against Nova format requirements."""
-    samples = load_jsonl_data(args.input_file)
-    num_samples = len(samples)
-    validate_data_record_bounds(num_samples, args.model_name)
+    try:
+        samples = load_jsonl_data(args.input_file)
+        num_samples = len(samples)
+        print(f"Loaded {num_samples} samples from {args.input_file}")
+        validate_data_record_bounds(num_samples, args.model_name)
+    except Exception as e:
+        print(f"Error loading or validating file bounds: {e}")
+        raise
 
     error_message = ""
     failed_samples_id_list = []
 
+    print(f"Validating samples for model: {args.model_name}")
     for i, sample in enumerate(samples):
         try:
             ConverseDatasetSample.model_validate(sample, context={"model_name": args.model_name})
         except ValidationError as e:
             failed_samples_id_list.append(i)
-            error_message += f"Sample {i} - "
+            error_message += f"\nSample {i}:\n"
             for err in e.errors():
                 err["msg"] = err["msg"].replace("Value error, ", "")
-                sample_error_message = f"{err['loc']}: {err['msg']} (type={err['type']}). "
+                sample_error_message = f"  - Location {err['loc']}: {err['msg']} (type={err['type']})\n"
                 error_message += sample_error_message
         except Exception as e:
-            raise NovaInternalError(f"Error occured: {e}")
+            print(f"Unexpected error in sample {i}: {e}")
+            raise NovaInternalError(f"Error occurred in sample {i}: {e}")
 
     if error_message:
-        prefix_str = f"Problematic samples: "
-
+        print(f"\nValidation failed! Found errors in {len(failed_samples_id_list)} samples.")
+        
         if len(failed_samples_id_list) > 3:
             first_sample_id = failed_samples_id_list[0]
             second_sample_id = failed_samples_id_list[1]
             last_sample_id = failed_samples_id_list[-1]
-            failed_samples_str = f"[{first_sample_id}, {second_sample_id}, ...{last_sample_id}]. "
+            failed_samples_str = f"[{first_sample_id}, {second_sample_id}, ...{last_sample_id}]"
         else:
-            failed_samples_str = f"{failed_samples_id_list}. "
+            failed_samples_str = f"{failed_samples_id_list}"
 
-        final_err_msg = prefix_str + failed_samples_str + error_message
+        final_err_msg = f"Validation failed for samples: {failed_samples_str}\n{error_message}"
         raise NovaClientError(final_err_msg)
     else:
-        print("Validation successful, all samples passed")
+        print("✅ Validation successful, all samples passed!")
 
 
 def check_roles_order(messages):

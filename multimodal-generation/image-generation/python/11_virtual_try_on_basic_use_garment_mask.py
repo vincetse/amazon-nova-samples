@@ -1,58 +1,59 @@
-import logging
-import os
-from datetime import datetime
+#!/usr/bin/env python3
 from random import randint
-from amazon_nova_canvas_utils import (
-    generate_images,
-    load_image_as_base64,
-    base64_to_pil_image,
-)
+from amazon_image_gen import BedrockImageGenerator
+import file_utils
+import logging
+import base64
+from datetime import datetime
 
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
-# Edit these values to experiment with your own images.
-source_image_path = "../images/vto-images/vto_garment_mask_source.jpg"
-reference_image_path = "../images/vto-images/vto_garment_mask_reference.jpg"
+def main():
+        
+    # The image to be edited.
+    source_image_path = "../images/vto-images/vto_garment_mask_source.jpg"
+    reference_image_path = "../images/vto-images/vto_garment_mask_reference.jpg"
 
-inference_params = {
-    "taskType": "VIRTUAL_TRY_ON",
-    "virtualTryOnParams": {
-        "sourceImage": load_image_as_base64(source_image_path),
-        "referenceImage": load_image_as_base64(reference_image_path),
-        "maskType": "GARMENT",
-        "garmentBasedMask": {"garmentClass": "UPPER_BODY"},
-    },
-    # The following is optional but provided here for you to experiment with.
-    "imageGenerationConfig": {
-        "numberOfImages": 1,
-        "quality": "standard",
-        "cfgScale": 6.5,
-        "seed": randint(0, 2147483646),
-    },
-}
+    # Load the source image from disk.
+    with open(source_image_path, "rb") as image_file:
+        source_image_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+    # Load the reference image from disk.
+    with open(reference_image_path, "rb") as image_file:
+        reference_image_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+    
+    # Configure the inference parameters.
+    inference_params = {
+        "taskType": "VIRTUAL_TRY_ON",
+        "virtualTryOnParams": {
+            "sourceImage": source_image_base64,
+            "referenceImage": reference_image_base64,
+            "maskType": "GARMENT",
+            "garmentBasedMask": {"garmentClass": "UPPER_BODY"},
+        },
+        # The following is optional but provided here for you to experiment with.
+        "imageGenerationConfig": {
+            "numberOfImages": 1,
+            "quality": "standard",
+            "cfgScale": 6.5,
+            "seed": randint(0, 2147483646),
+        },
+    }
 
-output_folder = os.path.join("output", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    # Define an output directory with a unique name.
+    generation_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_directory = f"output/{generation_id}"
 
-try:
-    response_body = generate_images(
-        inference_params=inference_params,
-        save_folder_path=output_folder,
-        model_id="amazon.nova-canvas-v1:0",
-        region_name="us-east-1",
-    )
+    # Create the generator.
+    generator = BedrockImageGenerator(
+            output_directory=output_directory
+        )
+    # Generate the image(s).
+    response = generator.generate_images(inference_params)
 
-    # An error message may be returned, even if some images were generated.
-    if "error" in response_body:
-        logging.error(response_body["error"])
+    if "images" in response:
+        # Save and display each image
+        file_utils.save_base64_images(response["images"], output_directory, "image")
 
-    if "images" in response_body:
-        # Display all images.
-        for image_base64 in response_body["images"]:
-            image = base64_to_pil_image(image_base64)
-            #process image if required
-            
-
-except Exception as e:
-    logging.error(e)
-
-print(f"Done! Artifacts saved to {os.path.abspath(output_folder)}")
+if __name__ == "__main__":
+    main()

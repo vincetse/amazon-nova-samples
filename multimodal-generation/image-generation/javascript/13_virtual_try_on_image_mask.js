@@ -1,72 +1,57 @@
-const fs = require('fs');
-const path = require('path');
-const { generateImages, loadImageAsBase64, base64ToBuffer } = require('./amazon_nova_canvas_utils');
+import { BedrockImageGenerator } from './BedrockImageGenerator.js';
+import { imageToBase64 } from './fileUtils.js';
 
-// Configure logging
-const log = {
-    info: (msg) => console.log(`[INFO] ${msg}`),
-    error: (msg) => console.error(`[ERROR] ${msg}`)
-};
-
-// Edit these values to experiment with your own images.
+// Path to image to be edited
 const sourceImagePath = "../images/vto-images/vto_image_mask_source.jpg"
 const maskImagePath = "../images/vto-images/vto_image_mask_maskimage.png"
 const referenceImagePath = "../images/vto-images/vto_image_mask_reference.jpg"
 
-const outputFolder = path.join("output", new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
 
-async function main() {
+const generateImages = async () => {
+
+    // Format timestamp for unique directory naming
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const outputDirectory = `output/${timestamp}`;
+
+    const generator = new BedrockImageGenerator({ outputDirectory });
+
     try {
-        const sourceImageBase64 = await loadImageAsBase64(sourceImagePath);
-        const maskImageBase64 = await loadImageAsBase64(maskImagePath);
-        const referenceImageBase64 = await loadImageAsBase64(referenceImagePath);
+            // Read the images from file and encode them as base64 strings
+            const sourceImageBase64 = await imageToBase64(sourceImagePath);
+            const maskImageBase64 = await imageToBase64(maskImagePath);
+            const referenceImageBase64 = await imageToBase64(referenceImagePath);
+    
+            const params = {
+                taskType: "VIRTUAL_TRY_ON",
+                virtualTryOnParams: {
+                    sourceImage: sourceImageBase64,
+                    referenceImage: referenceImageBase64,
+                    maskType: "IMAGE",
+                    imageBasedMask: { maskImage: maskImageBase64 },
+                    mergeStyle: "DETAILED"
+                },
+                imageGenerationConfig: {
+                    numberOfImages: 1,
+                    quality: "standard",
+                    cfgScale: 6.5,
+                    seed: Math.floor(Math.random() * 2147483646)
+                }
+            };
         
-        const inferenceParams = {
-            taskType: "VIRTUAL_TRY_ON",
-            virtualTryOnParams: {
-                sourceImage: sourceImageBase64,
-                referenceImage: referenceImageBase64,
-                maskType: "IMAGE",
-                imageBasedMask: { maskImage: maskImageBase64 },
-                mergeStyle: "DETAILED"
-            },
-            imageGenerationConfig: {
-                numberOfImages: 1,
-                quality: "standard",
-                cfgScale: 6.5,
-                seed: Math.floor(Math.random() * 2147483646)
+            const images = await generator.generateImages(params);
+                console.log('Generated images:', images.join(', '));
+            } catch (err) {
+                console.error('Image generation failed:', err.message);
+                process.exit(1);
             }
         };
-        
-        const responseBody = await generateImages(
-            inferenceParams,
-            "",
-            outputFolder,
-            "amazon.nova-canvas-v1:0",  
-            "us-east-1"
-        );
 
-        if (responseBody.error) {
-            log.error(responseBody.error);
-        }
-
-        if (responseBody.images) {
-            for (const imageBase64 of responseBody.images) {
-                const image = base64ToBuffer(imageBase64);
-                //process image if required
-                console.log("Image generated successfully");
-            }
-        }
-
-    } catch (error) {
-        log.error(error.message);
+// Self-executing async function
+(async () => {
+    try {
+        await generateImages();
+    } catch (err) {
+        console.error('Fatal error:', err.message);
+        process.exit(1);
     }
-
-    console.log(`Done! Artifacts saved to ${path.resolve(outputFolder)}`);
-}
-
-// Execute the main function
-main().catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
-});
+})();

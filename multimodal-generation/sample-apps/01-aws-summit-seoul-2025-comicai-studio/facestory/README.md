@@ -64,6 +64,3 @@ Analyze facial features and generate fortune readings:
 1. Upload a face image
 2. Run facial feature analysis
 3. Generate personalized fortune reading based on analysis
-
----
-*Written by jesam@, kichul@*

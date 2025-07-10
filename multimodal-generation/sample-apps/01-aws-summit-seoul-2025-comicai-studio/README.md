@@ -72,8 +72,6 @@ This repository is organized by feature rather than by exhibition corner:
    - Image-to-video expansion (02_image_to_video_expansion.ipynb)
    - Face-to-persona character generation (03_face_to_persona_generation.ipynb)
 
-3. **toonmirror/**: *(Coming soon)* Will contain code samples for the ToonMirror interactive experience
-
 ## Code Implementation
 
 The code provided in this repository has been simplified to focus on the core functionality and key concepts:

@@ -2,6 +2,8 @@
 
 This repository contains sample applications showcased at the AWS Summit Seoul 2025, demonstrating the collaboration between AI and renowned Korean cartoonist Young-man Huh (허영만). The ComicAI Studio project represents a new paradigm where generative AI and human creators coexist and collaborate in the comic industry.
 
+> **Important Note**: The code in this repository has been simplified to demonstrate core functionality while making it easier to understand and implement. Due to copyright restrictions, actual comic images from Young-man Huh's works are not included in this repository.
+
 ## Project Vision
 
 Recent rapid advancements in AI technology have brought both new possibilities and concerns to the creative field. In the comic industry, there has been active debate about the introduction of AI. Some artists express concerns that AI might encroach on the unique domain of creators. However, we believe that these technological advancements can be opportunities rather than threats.
@@ -39,11 +41,13 @@ ToonCraft generates dynamic questionnaires using Amazon Bedrock's text generatio
 - Text-guided image regeneration from food images
 - Spatial and temporal expansion of images via outpainting and video synthesis
 - Semantic-driven character generation from facial images
+- Virtual try-on functionality for placing food items onto empty plates with multiple merge styles
 
 **Notebooks:**
 - [01_image_regeneration.ipynb](tooncraft/01_image_regeneration.ipynb): Generate new food images by extracting prompts from a single image and using text-to-image and image-to-image techniques
 - [02_image_to_video_expansion.ipynb](tooncraft/02_image_to_video_expansion.ipynb): Expand the visible region of an image using outpainting, then generate a smooth video using Nova Reel
 - [03_face_to_persona_generation.ipynb](tooncraft/03_face_to_persona_generation.ipynb): Extract personality traits from a face and generate AI character portraits based on inferred persona
+- [04_virtual_try_on_food_theme.ipynb](tooncraft/04_virtual_try_on_food_theme.ipynb): Virtual try-on functionality that places food items onto empty plates using Amazon Nova Canvas with multiple merge styles (SEAMLESS, BALANCED, DETAILED)
 
 > **Note**: The Comic Style Transformation functionality is part of the ToonCraft corner, which transforms cooking processes into comic-style artwork.
 
@@ -69,10 +73,16 @@ This repository is organized by feature rather than by exhibition corner:
    - Food image regeneration (01_image_regeneration.ipynb)
    - Image-to-video expansion (02_image_to_video_expansion.ipynb)
    - Face-to-persona character generation (03_face_to_persona_generation.ipynb)
+   - Virtual try-on for food placement (04_virtual_try_on_food_theme.ipynb)
 
-3. **toonmirror/**: *(Coming soon)* Will contain code samples for the ToonMirror interactive experience
+## Code Implementation
 
+The code provided in this repository has been simplified to focus on the core functionality and key concepts:
 
+- Sample implementations demonstrate the essential techniques without complex production-level code
+- Examples use placeholder images and generic assets instead of copyrighted materials
+- Workflows have been streamlined to make the concepts more accessible to developers
+- Each notebook includes detailed comments to explain the approach and methodology
 
 ## Getting Started
 
@@ -93,6 +103,10 @@ Each application folder contains detailed instructions on how to run the demos:
 ## Acknowledgements
 
 This project is a collaboration between AWS and Young-man Huh, one of Korea's most renowned cartoonists. We extend our gratitude to Young-man Huh for his artistic contributions and vision in exploring the intersection of traditional comic art and cutting-edge AI technology.
+
+## Copyright Notice
+
+All comic works referenced in this project (including "Tazza", "Beat", "Kkol", "Sikgaek", and "Baekban Gihaeng") are copyrighted materials owned by Young-man Huh. The sample applications in this repository use generic images and placeholders instead of actual comic artwork to respect these copyrights. Any implementation using the actual comic artwork would require proper licensing and permissions from the copyright holder.
 
 ---
 

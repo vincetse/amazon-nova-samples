@@ -41,11 +41,13 @@ ToonCraft generates dynamic questionnaires using Amazon Bedrock's text generatio
 - Text-guided image regeneration from food images
 - Spatial and temporal expansion of images via outpainting and video synthesis
 - Semantic-driven character generation from facial images
+- Virtual try-on functionality for placing food items onto empty plates with multiple merge styles
 
 **Notebooks:**
 - [01_image_regeneration.ipynb](tooncraft/01_image_regeneration.ipynb): Generate new food images by extracting prompts from a single image and using text-to-image and image-to-image techniques
 - [02_image_to_video_expansion.ipynb](tooncraft/02_image_to_video_expansion.ipynb): Expand the visible region of an image using outpainting, then generate a smooth video using Nova Reel
 - [03_face_to_persona_generation.ipynb](tooncraft/03_face_to_persona_generation.ipynb): Extract personality traits from a face and generate AI character portraits based on inferred persona
+- [04_virtual_try_on_food_theme.ipynb](tooncraft/04_virtual_try_on_food_theme.ipynb): Virtual try-on functionality that places food items onto empty plates using Amazon Nova Canvas with multiple merge styles (SEAMLESS, BALANCED, DETAILED)
 
 > **Note**: The Comic Style Transformation functionality is part of the ToonCraft corner, which transforms cooking processes into comic-style artwork.
 
@@ -71,6 +73,7 @@ This repository is organized by feature rather than by exhibition corner:
    - Food image regeneration (01_image_regeneration.ipynb)
    - Image-to-video expansion (02_image_to_video_expansion.ipynb)
    - Face-to-persona character generation (03_face_to_persona_generation.ipynb)
+   - Virtual try-on for food placement (04_virtual_try_on_food_theme.ipynb)
 
 ## Code Implementation
 

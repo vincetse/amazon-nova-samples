@@ -1,18 +1,29 @@
 import argparse
 import json
 import re
-
-from pydantic import BaseModel, ValidationError, ValidationInfo, field_validator, model_validator
 from typing import List, Optional
 
+from pydantic import BaseModel, ValidationError, ValidationInfo, field_validator, model_validator
 
 IMAGE_FORMATS = ["jpeg", "png", "gif", "webp"]
 VIDEO_FORMATS = ["mov", "mkv", "mp4", "webm"]
 MAX_NUM_IMAGES = 10
 MODEL_TO_NUM_SAMPLES_MAP = {"micro": (8, 20000), "lite": (8, 20000), "pro": (8, 20000)}
 
-# Keywords that are not allowed in text content
-FORBIDDEN_KEYWORDS = ["Bot:", "<image>", "<video>", "[EOS]", "System:", "Assistant:", "User:"]
+INVALID_TOKENS_TEXT = [
+    "System:",
+    "SYSTEM:",
+    "User:",
+    "USER:",
+    "Bot:",
+    "BOT:",
+    "Assistant:",
+    "ASSISTANT:",
+    "Thought:",
+    "[EOS]",
+    "<image>",
+    "<video>",
+]
 
 
 class ConverseRoles:
@@ -32,9 +43,12 @@ class NovaClientError(ValueError):
     def __init__(self, message):
         super().__init__(message)
 
+
 class NovaInternalError(Exception):
     """Base exception for Nova Fine Tuning validation errors"""
+
     pass
+
 
 def check_jsonl_file(file_path):
     """Validates that the input file has a .jsonl extension."""
@@ -61,24 +75,6 @@ def load_jsonl_data(file_path: str):
         raise NovaClientError(f"Error loading data from {file_path}: {str(e)}")
 
 
-def check_forbidden_keywords(text: str) -> List[str]:
-    """
-    Checks if text contains any forbidden keywords (case-insensitive).
-    
-    Args:
-        text (str): The text to check
-        
-    Returns:
-        List[str]: List of forbidden keywords found in the text
-    """
-    found_keywords = []
-    text_lower = text.lower()
-    for keyword in FORBIDDEN_KEYWORDS:
-        if keyword.lower() in text_lower:
-            found_keywords.append(keyword)
-    return found_keywords
-
-
 class S3Location(BaseModel):
     """Represents and validates an S3 URI location."""
 
@@ -88,7 +84,7 @@ class S3Location(BaseModel):
     def validate_format(cls, uri):
         """Validates that the URI starts with 's3://'."""
         if not uri.startswith("s3://"):
-            raise ValueError(f"Invalid S3 URI, must start with 's3://'")
+            raise ValueError("Invalid S3 URI, must start with 's3://'")
         is_valid_path(uri.replace("s3://", ""))
         return uri
 
@@ -144,15 +140,11 @@ class ContentItem(BaseModel):
         return values
 
     @field_validator("text")
-    def validate_text_keywords(cls, text):
-        """Validates that text does not contain forbidden keywords."""
-        if text is not None:
-            found_keywords = check_forbidden_keywords(text)
-            if found_keywords:
-                keywords_str = ", ".join(found_keywords)
-                raise ValueError(
-                    f"Invalid text content, please do not use these keywords: {keywords_str}"
-                )
+    def validate_text(cls, text: str):
+        if not text:
+            return text
+
+        validate_invalid_tokens(text)
         return text
 
 
@@ -241,14 +233,11 @@ class SystemMessage(BaseModel):
     text: str
 
     @field_validator("text")
-    def validate_text_keywords(cls, text):
-        """Validates that system message text does not contain forbidden keywords."""
-        found_keywords = check_forbidden_keywords(text)
-        if found_keywords:
-            keywords_str = ", ".join(found_keywords)
-            raise ValueError(
-                f"Invalid system message text, please do not use these keywords: {keywords_str}"
-            )
+    def validate_text(cls, text: str):
+        if not text:
+            return text
+
+        validate_invalid_tokens(text)
         return text
 
 
@@ -289,15 +278,15 @@ def validate_converse_dataset(args):
             error_message += f"\nSample {i}:\n"
             for err in e.errors():
                 err["msg"] = err["msg"].replace("Value error, ", "")
-                sample_error_message = f"  - Location {err['loc']}: {err['msg']} (type={err['type']})\n"
+                sample_error_message = (
+                    f"  - Location {err['loc']}: {err['msg']} (type={err['type']})\n"
+                )
                 error_message += sample_error_message
         except Exception as e:
-            print(f"Unexpected error in sample {i}: {e}")
-            raise NovaInternalError(f"Error occurred in sample {i}: {e}")
+            raise NovaInternalError(f"Unexpected error occurred in sample {i}: {e}")
 
     if error_message:
-        print(f"\nValidation failed! Found errors in {len(failed_samples_id_list)} samples.")
-        
+
         if len(failed_samples_id_list) > 3:
             first_sample_id = failed_samples_id_list[0]
             second_sample_id = failed_samples_id_list[1]
@@ -306,10 +295,30 @@ def validate_converse_dataset(args):
         else:
             failed_samples_str = f"{failed_samples_id_list}"
 
-        final_err_msg = f"Validation failed for samples: {failed_samples_str}\n{error_message}"
+        final_err_msg = (
+            f"Validation failed for samples: {failed_samples_str}\n\n"
+            f"Note: Sample IDs are zero-indexed.\n"
+            f"{error_message}"
+        )
         raise NovaClientError(final_err_msg)
     else:
-        print("✅ Validation successful, all samples passed!")
+        print("Validation successful, all samples passed!")
+
+
+def validate_invalid_tokens(text: str):
+    """Validates that the input text does not contain any disallowed tokens"""
+
+    stripped_text = text.strip()
+    client_invalid_tokens = []
+    for invalid_token in INVALID_TOKENS_TEXT:
+        if invalid_token in stripped_text:
+            client_invalid_tokens.append(f"`{invalid_token}`")
+
+    if client_invalid_tokens:
+        client_invalid_tokens_str = ", ".join(client_invalid_tokens)
+        raise ValueError(
+            f"Invalid text content, following tokens are invalid: {client_invalid_tokens_str}. Please check documentation for other invalid tokens"
+        )
 
 
 def check_roles_order(messages):
@@ -340,7 +349,7 @@ def is_valid_path(file_path):
     pattern = r"^[\w\-/\.]+$"
     if not re.match(pattern, file_path):
         raise ValueError(
-            f"Invalid characters in 'uri'. Only alphanumeric, underscores, hyphens, slashes, and dots are allowed"
+            "Invalid characters in 'uri'. Only alphanumeric, underscores, hyphens, slashes, and dots are allowed"
         )
 
 

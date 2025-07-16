@@ -1,0 +1,200 @@
+{
+  "results_2025-06-25T01-12-47.457773.json": {
+    "config_general": {
+      "lighteval_sha": "?",
+      "num_fewshot_seeds": 1,
+      "max_samples": null,
+      "job_id": 0,
+      "start_time": 1003.292763922,
+      "end_time": 1105.248101518,
+      "total_evaluation_time_secondes": "101.95533759600016",
+      "model_name": "/opt/ml/additonals3data/fine_tuned_model_artifacts/fine_tuned_model_bundle/model",
+      "model_sha": "",
+      "model_dtype": null,
+      "model_size": "",
+      "generation_parameters": {
+        "early_stopping": null,
+        "repetition_penalty": null,
+        "frequency_penalty": null,
+        "length_penalty": null,
+        "presence_penalty": null,
+        "max_new_tokens": null,
+        "min_new_tokens": null,
+        "seed": null,
+        "stop_tokens": null,
+        "temperature": null,
+        "top_k": null,
+        "min_p": null,
+        "top_p": null,
+        "truncate_prompt": null,
+        "response_format": null
+      }
+    },
+    "results": {
+      "custom|gen_qa_gen_qa|0": {
+        "rouge1": 0.4580767051728939,
+        "rouge1_stderr": 0.006830491914534475,
+        "rouge2": 0.07477698076609147,
+        "rouge2_stderr": 0.0036721365764997784,
+        "rougeL": 0.45703770921556763,
+        "rougeL_stderr": 0.006826445302088553,
+        "em": 0.40330711837063926,
+        "em_stderr": 0.006966908566518136,
+        "qem": 0.41338979632990525,
+        "qem_stderr": 0.006993610185363071,
+        "f1": 0.4087685689319083,
+        "f1_stderr": 0.006947582212679722,
+        "f1_score_quasi": 0.4205283323250655,
+        "f1_score_quasi_stderr": 0.006972011670973061,
+        "bleu": 0.0,
+        "bleu_stderr": 0.8254038273602291
+      },
+      "all": {
+        "rouge1": 0.4580767051728939,
+        "rouge1_stderr": 0.006830491914534475,
+        "rouge2": 0.07477698076609147,
+        "rouge2_stderr": 0.0036721365764997784,
+        "rougeL": 0.45703770921556763,
+        "rougeL_stderr": 0.006826445302088553,
+        "em": 0.40330711837063926,
+        "em_stderr": 0.006966908566518136,
+        "qem": 0.41338979632990525,
+        "qem_stderr": 0.006993610185363071,
+        "f1": 0.4087685689319083,
+        "f1_stderr": 0.006947582212679722,
+        "f1_score_quasi": 0.4205283323250655,
+        "f1_score_quasi_stderr": 0.006972011670973061,
+        "bleu": 0.0,
+        "bleu_stderr": 0.8254038273602291
+      }
+    },
+    "versions": {
+      "custom|gen_qa_gen_qa|0": 0
+    },
+    "config_tasks": {
+      "custom|gen_qa_gen_qa": {
+        "name": "gen_qa_gen_qa",
+        "prompt_function": "create_gen_qa_doc",
+        "hf_repo": "custom/gen_qa",
+        "hf_subset": "default",
+        "metric": [
+          {
+            "metric_name": "rouge1",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "8",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "rouge2",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "8",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "rougeL",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "8",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "em",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "1",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "qem",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "1",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "f1",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "1",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "f1_score_quasi",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "1",
+            "sample_level_fn": "compute",
+            "corpus_level_fn": "mean"
+          },
+          {
+            "metric_name": "bleu",
+            "higher_is_better": true,
+            "category": "3",
+            "use_case": "9",
+            "sample_level_fn": "prepare",
+            "corpus_level_fn": "compute"
+          }
+        ],
+        "hf_revision": null,
+        "hf_filter": null,
+        "hf_avail_splits": [
+          "test"
+        ],
+        "trust_dataset": true,
+        "evaluation_splits": [
+          "test"
+        ],
+        "few_shots_split": null,
+        "few_shots_select": null,
+        "generation_size": 8192,
+        "generation_grammar": null,
+        "stop_sequence": [],
+        "num_samples": null,
+        "suite": [
+          "custom"
+        ],
+        "original_num_docs": 4959,
+        "effective_num_docs": 4959,
+        "must_remove_duplicate_docs": false,
+        "version": 0
+      }
+    },
+    "summary_tasks": {
+      "custom|gen_qa_gen_qa|0": {
+        "hashes": {
+          "hash_examples": "73294ae8d01f4372",
+          "hash_full_prompts": "73294ae8d01f4372",
+          "hash_input_tokens": "f56f9258465fd92f",
+          "hash_cont_tokens": "f56f9258465fd92f"
+        },
+        "truncated": 0,
+        "non_truncated": 4959,
+        "padded": 0,
+        "non_padded": 4959,
+        "effective_few_shots": 0.0,
+        "num_truncated_few_shots": 0
+      }
+    },
+    "summary_general": {
+      "hashes": {
+        "hash_examples": "a0d971fe655fc72a",
+        "hash_full_prompts": "a0d971fe655fc72a",
+        "hash_input_tokens": "96c4880d5a2ed18c",
+        "hash_cont_tokens": "96c4880d5a2ed18c"
+      },
+      "truncated": 0,
+      "non_truncated": 4959,
+      "padded": 0,
+      "non_padded": 4959,
+      "num_truncated_few_shots": 0
+    }
+  }
+}

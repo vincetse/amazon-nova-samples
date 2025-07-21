@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # #!/usr/bin/env python3
-#ada credentials update --account=905418197933 --role=agi_product --provider=Conduit --once"""
-#aws configure add-model --service-model file:////Users/dewanup/Documents/GitHub/amazon-nova-samples/customization/sagemaker-customization/sagemaker-2017-07-24.normal.json --service-name sagemaker
 #pip install -r requirements.txt
 
 """SageMaker Nova Training Script Runner (Step 2 of Nova Fine-tuning Process)

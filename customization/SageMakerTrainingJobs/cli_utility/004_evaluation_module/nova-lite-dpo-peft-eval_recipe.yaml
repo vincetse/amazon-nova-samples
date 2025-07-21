@@ -8,8 +8,8 @@ inference:
   top_k: -1
   top_p: 1.0
 run:
-  data_s3_path: s3://sagemaker-us-east-1-905418197933/datasets/AceReasonMath/acereason-math-dataprep-1750997008/gen_qa.jsonl
-  model_name_or_path: s3://customer-escrow-905418197933-smtj-4a214be3/ace-reason-math-fullrank-2025-06-23-22-34-07-292/
+  data_s3_path: < DATA PATH >
+  model_name_or_path:<MODEL PATH>
   model_type: amazon.nova-lite-v1:0:300k
   name: nova-lite-dpo-peft-eval
   replicas: 1

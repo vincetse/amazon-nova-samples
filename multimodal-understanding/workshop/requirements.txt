@@ -1,12 +1,31 @@
-boto3>=1.28.57
-botocore>=1.31.57
+# AWS SDK and Core Dependencies
+boto3>=1.39.0
+botocore>=1.39.0
+
+# Database and Storage
 opensearch-py
-retrying
-ipywidgets
 s3fs
-pickleshare
-retrying
-Pillow
+
+# Data Processing
 pandas
+numpy
+retrying
+
+# Image and Media Processing
+Pillow
+webvtt-py
+opencv-python
+
+# Jupyter and Interactive Computing
+ipywidgets
+pickleshare
+
+# Strands Framework for Agents
 strands-agents
 strands-agents-tools
+
+# Nova Prompt Optimizer (if needed)
+amzn_nova_prompt_optimizer
+
+# Additional Utilities
+typing_extensions

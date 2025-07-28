@@ -1,10 +1,6 @@
 # AWS SDK and Core Dependencies
-boto3>=1.39.0
-botocore>=1.39.0
-
-# Database and Storage
-opensearch-py
-s3fs
+boto3
+botocore
 
 # Data Processing
 pandas
@@ -13,8 +9,6 @@ retrying
 
 # Image and Media Processing
 Pillow
-webvtt-py
-opencv-python
 
 # Jupyter and Interactive Computing
 ipywidgets
@@ -25,7 +19,7 @@ strands-agents
 strands-agents-tools
 
 # Nova Prompt Optimizer (if needed)
-amzn_nova_prompt_optimizer
+nova-prompt-optimizer
 
 # Additional Utilities
 typing_extensions

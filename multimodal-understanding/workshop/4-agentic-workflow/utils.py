@@ -5,6 +5,8 @@ import zipfile
 import logging
 import pprint
 from io import BytesIO
+import pandas as pd
+
 
 iam_client = boto3.client('iam')
 sts_client = boto3.client('sts')
@@ -20,6 +22,31 @@ bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 
 logging.basicConfig(format='[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# Helper function to retrieve all bookings from DynamoDB
+def selectAllFromDynamodb(table_name):
+    """
+    Retrieves all items from the restaurant_bookings DynamoDB table.
+    
+    Returns:
+        pandas.DataFrame: A dataframe containing all booking records
+    """
+    # Get the table object
+    table = dynamodb_resource.Table(table_name)
+
+    # Scan the table and get all items
+    response = table.scan()
+    items = response['Items']
+
+    # Handle pagination if necessary
+    while 'LastEvaluatedKey' in response:
+        response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+        items.extend(response['Items'])
+
+    # Convert to pandas DataFrame for easier viewing
+    items = pd.DataFrame(items)
+    return items
 
 
 def create_dynamodb(table_name):

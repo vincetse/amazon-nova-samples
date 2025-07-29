@@ -2,8 +2,6 @@
 
 This repository contains sample applications showcased at the AWS Summit Seoul 2025, demonstrating the collaboration between AI and renowned Korean cartoonist Young-man Huh (허영만). The ComicAI Studio project represents a new paradigm where generative AI and human creators coexist and collaborate in the comic industry.
 
-> **Important Note**: The code in this repository has been simplified to demonstrate core functionality while making it easier to understand and implement. Due to copyright restrictions, actual comic images from Young-man Huh's works are not included in this repository.
-
 ## Project Vision
 
 Recent rapid advancements in AI technology have brought both new possibilities and concerns to the creative field. In the comic industry, there has been active debate about the introduction of AI. Some artists express concerns that AI might encroach on the unique domain of creators. However, we believe that these technological advancements can be opportunities rather than threats.

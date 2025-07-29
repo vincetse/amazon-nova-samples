@@ -1,6 +1,5 @@
 import io
 import os
-import av
 import base64
 import requests
 import tempfile

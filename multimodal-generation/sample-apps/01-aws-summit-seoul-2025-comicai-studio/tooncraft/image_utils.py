@@ -1,4 +1,3 @@
-import io
 import os
 import base64
 import requests
@@ -7,7 +6,6 @@ from io import BytesIO
 from PIL import Image
 from typing import Tuple
 from IPython.display import display, HTML, Video, Image as IPythonImage
-
 
 
 # Function to encode image from bytes or PIL.Image

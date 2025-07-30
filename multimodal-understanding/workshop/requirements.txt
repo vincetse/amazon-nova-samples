@@ -18,8 +18,5 @@ pickleshare
 strands-agents
 strands-agents-tools
 
-# Nova Prompt Optimizer (if needed)
-nova-prompt-optimizer
-
 # Additional Utilities
 typing_extensions

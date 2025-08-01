@@ -34,6 +34,6 @@ The following projects were developed by AWS teams and showcase examples of how 
 
     The CDK-deployable Nova Sonic package includes a generic WebSocket server and UI, serving as both a PoC starting point and a reference architecture for production deployments. It offers two server implementations—one using the Java SDK and the other using the Python SDK—allowing users to choose their preferred programming language. The package also includes a load testing tool to evaluate concurrency limits, helping with production capacity planning and cost estimation.
 
-- [Nova Sonic VoIP Gateway](https://github.com/aws-samples/nova-s2s-voip-gateway)
+- [Nova Sonic VoIP Gateway](https://github.com/aws-samples/sample-s2s-voip-gateway/tree/main)
 
     This project implements a SIP endpoint that acts as a gateway between traditional phone systems and Nova Sonic speech-to-speech. It allows users to call a phone number and have a conversation with Nova Sonic over VoIP. The solution includes deployment options for ECS with CDK or a single EC2 instance, making it versatile for different use cases. It bridges RTP audio streams with Nova Sonic, enabling voice AI capabilities through standard telephony infrastructure.

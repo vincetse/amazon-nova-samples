@@ -1,4 +1,3 @@
-import os
 import boto3
 from urllib.parse import quote, unquote
 

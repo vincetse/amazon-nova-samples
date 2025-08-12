@@ -11,18 +11,12 @@ import warnings
 import random
 warnings.filterwarnings('ignore')
 
-valid_generation_models = ["anthropic.claude-3-5-sonnet-20240620-v1:0", 
-                          "anthropic.claude-3-5-haiku-20241022-v1:0", 
-                          "anthropic.claude-3-sonnet-20240229-v1:0",
-                          "anthropic.claude-3-haiku-20240307-v1:0",
-                          "amazon.nova-micro-v1:0"] 
+valid_generation_models = ["amazon.nova-micro-v1:0",
+                          "amazon.nova-pro-v1:0"]
 
-valid_reranking_models = ["cohere.rerank-v3-5:0",
-                          "amazon.rerank-v1:0"] 
+valid_reranking_models = ["amazon.rerank-v1:0"]
 
-valid_embedding_models = ["cohere.embed-multilingual-v3", 
-                          "cohere.embed-english-v3", 
-                          "amazon.titan-embed-text-v1", 
+valid_embedding_models = ["amazon.titan-embed-text-v1",
                           "amazon.titan-embed-text-v2:0"]
 
 embedding_context_dimensions = {
@@ -59,7 +53,7 @@ class BedrockKnowledgeBase:
             intermediate_bucket_name=None,
             lambda_function_name=None,
             embedding_model="amazon.titan-embed-text-v2:0",
-            generation_model="anthropic.claude-3-sonnet-20240229-v1:0",
+            generation_model="amazon.nova-pro-v1:0",
             reranking_model="cohere.rerank-v3-5:0",
             chunking_strategy="FIXED_SIZE",
             suffix=None,
@@ -103,20 +97,20 @@ class BedrockKnowledgeBase:
         self.chunking_strategy = chunking_strategy
         self.multi_modal = multi_modal
         self.parser = parser
-        
+
         if multi_modal or chunking_strategy == "CUSTOM" :
             self.intermediate_bucket_name = intermediate_bucket_name or f"{self.kb_name}-intermediate-{self.suffix}"
             self.lambda_function_name = lambda_function_name or f"{self.kb_name}-lambda-{self.suffix}"
         else:
             self.intermediate_bucket_name = None
             self.lambda_function_name = None
-        
+
         self.embedding_model = embedding_model
         self.generation_model = generation_model
         self.reranking_model = reranking_model
-        
+
         self._validate_models()
-        
+
         self.encryption_policy_name = f"bedrock-sample-rag-sp-{self.suffix}"
         self.network_policy_name = f"bedrock-sample-rag-np-{self.suffix}"
         self.access_policy_name = f'bedrock-sample-rag-ap-{self.suffix}'
@@ -148,16 +142,16 @@ class BedrockKnowledgeBase:
         print("========================================================================================")
         print(f"Step 1 - Creating or retrieving S3 bucket(s) for Knowledge Base documents")
         self.create_s3_bucket()
-        
+
         print("========================================================================================")
         print(f"Step 2 - Creating Knowledge Base Execution Role ({self.kb_execution_role_name}) and Policies")
         self.bedrock_kb_execution_role = self.create_bedrock_execution_role_multi_ds(self.bucket_names, self.secrets_arns)
         self.bedrock_kb_execution_role_name = self.bedrock_kb_execution_role['Role']['RoleName']
-        
+
         print("========================================================================================")
         print(f"Step 3 - Creating OSS encryption, network and data access policies")
         self.encryption_policy, self.network_policy, self.access_policy = self.create_policies_in_oss()
-        
+
         print("========================================================================================")
         print(f"Step 4 - Creating OSS Collection (this step takes a couple of minutes to complete)")
         self.host, self.collection, self.collection_id, self.collection_arn = self.create_oss()
@@ -169,11 +163,11 @@ class BedrockKnowledgeBase:
             connection_class=RequestsHttpConnection,
             timeout=300
         )
-        
+
         print("========================================================================================")
         print(f"Step 5 - Creating OSS Vector Index")
         self.create_vector_index()
-        
+
         print("========================================================================================")
         print(f"Step 6 - Will create Lambda Function if chunking strategy selected as CUSTOM")
         if self.chunking_strategy == "CUSTOM":
@@ -182,9 +176,9 @@ class BedrockKnowledgeBase:
             self.lambda_arn = response['FunctionArn']
             print(response)
             print(f"Lambda function ARN: {self.lambda_arn}")
-        else: 
+        else:
             print(f"Not creating lambda function as chunking strategy is {self.chunking_strategy}")
-        
+
         print("========================================================================================")
         print(f"Step 7 - Creating Knowledge Base")
         self.knowledge_base, self.data_source = self.create_knowledge_base(self.data_sources)
@@ -290,7 +284,7 @@ class BedrockKnowledgeBase:
                     "Effect": "Allow",
                     "Action": [
                         "s3:GetObject",
-                        "s3:ListBucket", 
+                        "s3:ListBucket",
                         "s3:PutObject"
                     ],
                     "Resource": [
@@ -327,7 +321,7 @@ class BedrockKnowledgeBase:
         Returns:
             IAM role
         """
-      
+
         bucket_names = self.bucket_names.copy()
         if self.intermediate_bucket_name:
             bucket_names.append(self.intermediate_bucket_name)
@@ -369,9 +363,9 @@ class BedrockKnowledgeBase:
                                 "aws:ResourceAccount": f"{self.account_number}"
                             }
                         }
-                    } 
+                    }
                 ]
-            }   
+            }
 
         # 3. Define policy documents for secrets manager
         if secrets_arns:
@@ -387,9 +381,9 @@ class BedrockKnowledgeBase:
                         "Resource": secrets_arns
                     }
                 ]
-            } 
+            }
 
-        
+
 
          # 4. Define policy documents for BDA
         bda_policy_document = {
@@ -427,7 +421,7 @@ class BedrockKnowledgeBase:
         }
 
 
-        
+
         # 5. Define policy documents for lambda
         if self.chunking_strategy == "CUSTOM":
             lambda_policy_document = {
@@ -450,7 +444,7 @@ class BedrockKnowledgeBase:
                     }
                 ]
             }
-        
+
         cw_log_policy_document = {
             "Version": "2012-10-17",
             "Statement": [
@@ -468,7 +462,7 @@ class BedrockKnowledgeBase:
 
         assume_role_policy_document = {
         "Version": "2012-10-17",
-        
+
         "Statement": [
             {
                 "Effect": "Allow",
@@ -654,7 +648,7 @@ class BedrockKnowledgeBase:
             oss_policy_arn = oss_policy["Policy"]["Arn"]
         except self.iam_client.exceptions.EntityAlreadyExistsException:
             oss_policy_arn = f"arn:aws:iam::{self.account_number}:policy/{self.oss_policy_name}"
-        
+
         print("Opensearch serverless arn: ", oss_policy_arn)
 
         self.iam_client.attach_role_policy(
@@ -750,7 +744,7 @@ class BedrockKnowledgeBase:
                             "stepToApply": "POST_CHUNKING"
                         }
                     ]
-                }, 
+                },
                 "chunkingConfiguration": {"chunkingStrategy": "NONE"}
             }
         }
@@ -774,11 +768,11 @@ class BedrockKnowledgeBase:
         # create Knowledge Bases
         embedding_model_arn = f"arn:aws:bedrock:{self.region_name}::foundation-model/{self.embedding_model}"
         knowledgebase_configuration = { "type": "VECTOR", "vectorKnowledgeBaseConfiguration": { "embeddingModelArn": embedding_model_arn}}
-            
+
         if self.multi_modal:
             supplemental_storageLocation={"storageLocations": [{ "s3Location": { "uri": f"s3://{self.intermediate_bucket_name}"},"type": "S3"}]}
             knowledgebase_configuration['vectorKnowledgeBaseConfiguration']['supplementalDataStorageConfiguration'] = supplemental_storageLocation
-        
+
         try:
             create_kb_response = self.bedrock_agent_client.create_knowledge_base(
                 name=self.kb_name,
@@ -798,7 +792,7 @@ class BedrockKnowledgeBase:
             response = self.bedrock_agent_client.get_knowledge_base(knowledgeBaseId=kb_id)
             kb = response['knowledgeBase']
             pp.pprint(kb)
-          
+
         # create Data Sources
         print("Creating Data Sources")
         try:
@@ -816,10 +810,10 @@ class BedrockKnowledgeBase:
             ds = get_ds_response["dataSource"]
             pp.pprint(ds)
         return kb, ds_list
-    
+
     def create_data_sources(self, kb_id, data_sources):
         """
-        Create Data Sources for the Knowledge Base. 
+        Create Data Sources for the Knowledge Base.
         """
         ds_list=[]
 
@@ -834,7 +828,7 @@ class BedrockKnowledgeBase:
                         # "inclusionPrefixes":["*.*"] # you can use this if you want to create a KB using data within s3 prefixes.
                         }
                 }
-            
+
             confluence_data_source_congiguration = {
                 "confluenceConfiguration": {
                     "sourceConfiguration": {
@@ -842,7 +836,7 @@ class BedrockKnowledgeBase:
                         "hostType": "SAAS",
                         "authType": "", # BASIC | OAUTH2_CLIENT_CREDENTIALS
                         "credentialsSecretArn": ""
-                        
+
                     },
                     "crawlerConfiguration": {
                         "filterConfiguration": {
@@ -875,7 +869,7 @@ class BedrockKnowledgeBase:
                         "siteUrls": [],
                         "authType": "", # BASIC | OAUTH2_CLIENT_CREDENTIALS
                         "credentialsSecretArn": ""
-                        
+
                     },
                     "crawlerConfiguration": {
                         "filterConfiguration": {
@@ -956,7 +950,7 @@ class BedrockKnowledgeBase:
                 s3_data_source_congiguration["s3Configuration"]["bucketArn"] = f'arn:aws:s3:::{ds["bucket_name"]}'
                 # print(s3_data_source_congiguration)
                 data_source_configuration = s3_data_source_congiguration
-            
+
             if ds['type'] == "CONFLUENCE":
                 print(f'{idx +1 } data source: CONFLUENCE')
                 ds_name = f'{kb_id}-confluence'
@@ -995,21 +989,21 @@ class BedrockKnowledgeBase:
                 webcrawler_data_source_congiguration['webConfiguration']['crawlerConfiguration']['exclusionFilters'] = ds['exclusionFilters']
                 # print(webcrawler_data_source_congiguration)
                 data_source_configuration = webcrawler_data_source_congiguration
-                
 
-            # Create a DataSource in KnowledgeBase 
+
+            # Create a DataSource in KnowledgeBase
             chunking_strategy_configuration = self.create_chunking_strategy_config(self.chunking_strategy)
             print("============Chunking config========\n", chunking_strategy_configuration)
             vector_ingestion_configuration = chunking_strategy_configuration
 
             if self.multi_modal:
                 if self.parser == "BEDROCK_FOUNDATION_MODEL":
-                    parsing_configuration = {"bedrockFoundationModelConfiguration": 
-                                             {"parsingModality": "MULTIMODAL", "modelArn": f"arn:aws:bedrock:{self.region_name}::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"}, 
+                    parsing_configuration = {"bedrockFoundationModelConfiguration":
+                                             {"parsingModality": "MULTIMODAL", "modelArn": f"arn:aws:bedrock:{self.region_name}::foundation-model/amazon.nova-pro-v1:0"},
                                              "parsingStrategy": "BEDROCK_FOUNDATION_MODEL"}
-                    
+
                 if self.parser == 'BEDROCK_DATA_AUTOMATION':
-                    parsing_configuration = {"bedrockDataAutomationConfiguration": {"parsingModality": "MULTIMODAL"}, "parsingStrategy": "BEDROCK_DATA_AUTOMATION"}    
+                    parsing_configuration = {"bedrockDataAutomationConfiguration": {"parsingModality": "MULTIMODAL"}, "parsingStrategy": "BEDROCK_DATA_AUTOMATION"}
 
                 vector_ingestion_configuration["parsingConfiguration"] = parsing_configuration
 
@@ -1025,7 +1019,7 @@ class BedrockKnowledgeBase:
             # self.data_sources[idx]['dataSourceId'].append(ds['dataSourceId'])
             ds_list.append(ds)
         return ds_list
-        
+
 
     def start_ingestion_job(self):
         """
@@ -1054,7 +1048,7 @@ class BedrockKnowledgeBase:
             except Exception as e:
                 print(f"Couldn't start {idx} job.\n")
                 print(e)
-            
+
 
     def get_knowledge_base_id(self):
         """
@@ -1078,12 +1072,12 @@ class BedrockKnowledgeBase:
             delete_iam_roles_and_policies (bool): boolean to indicate if IAM roles and Policies should also be deleted
             delete_lambda_function (bool): boolean to indicate if Lambda function should also be deleted
         """
-        
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
 
             # delete knowledge base and data source.
-            
+
             # Delete knowledge base and data sources
             try:
                 # First delete all data sources
@@ -1104,7 +1098,7 @@ class BedrockKnowledgeBase:
                     knowledgeBaseId=self.knowledge_base['knowledgeBaseId']
                 )
                 print("======== Knowledge base and all data sources deleted =========")
-            
+
             except self.bedrock_agent_client.exceptions.ResourceNotFoundException as e:
                 print("Knowledge base not found:", e)
             except Exception as e:
@@ -1113,11 +1107,11 @@ class BedrockKnowledgeBase:
             # delete s3 bucket
             if delete_s3_bucket==True:
                     self.delete_s3()
-                    
+
             # delete IAM role and policies
             if delete_iam_roles_and_policies:
                 self.delete_iam_roles_and_policies()
-            
+
             if delete_lambda_function:
                 try:
                     self.delete_lambda_function()
@@ -1144,14 +1138,14 @@ class BedrockKnowledgeBase:
             except Exception as e:
                 print(e)
 
-            
+
     def delete_iam_roles_and_policies(self):
         for role_name in self.roles:
             print(f"Found role {role_name}")
             try:
                 self.iam_client.get_role(RoleName=role_name)
             except self.iam_client.exceptions.NoSuchEntityException:
-                print(f"Role {role_name} does not exist") 
+                print(f"Role {role_name} does not exist")
                 continue
             attached_policies = self.iam_client.list_attached_role_policies(RoleName=role_name)["AttachedPolicies"]
             print(f"======Attached policies with role {role_name}========\n", attached_policies)
@@ -1162,10 +1156,10 @@ class BedrockKnowledgeBase:
                 print(f"Detached policy {policy_name} from role {role_name}")
                 if str(policy_arn.split("/")[1]) == "service-role":
                     print(f"Skipping deletion of service-linked role policy {policy_name}")
-                else: 
+                else:
                     self.iam_client.delete_policy(PolicyArn=policy_arn)
                     print(f"Deleted policy {policy_name} from role {role_name}")
-                
+
             self.iam_client.delete_role(RoleName=role_name)
             print(f"Deleted role {role_name}")
         print("======== All IAM roles and policies deleted =========")
@@ -1193,7 +1187,7 @@ class BedrockKnowledgeBase:
                     bucket.object_versions.delete()
                     bucket.objects.all().delete()
                     print(f"Deleted all objects in bucket {bucket_name}")
-                    
+
                     # Delete the bucket
                     bucket.delete()
                     print(f"Deleted bucket {bucket_name}")

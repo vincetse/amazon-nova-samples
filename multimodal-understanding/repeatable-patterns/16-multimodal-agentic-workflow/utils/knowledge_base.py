@@ -54,7 +54,7 @@ class BedrockKnowledgeBase:
             lambda_function_name=None,
             embedding_model="amazon.titan-embed-text-v2:0",
             generation_model="amazon.nova-pro-v1:0",
-            reranking_model="cohere.rerank-v3-5:0",
+            reranking_model="amazon.rerank-v1:0",
             chunking_strategy="FIXED_SIZE",
             suffix=None,
     ):
